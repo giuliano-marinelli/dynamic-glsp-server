@@ -63,7 +63,7 @@ export class DynamicLanguageSpecification implements LanguageSpecification {
       version: '0.0.0',
       nodes:
         languageElement.type == LanguageElementType.NODE
-          ? { [languageElement.name]: languageElement as LanguageNode }
+          ? { showcaseNode: languageElement as LanguageNode }
           : {
               showcaseNode: {
                 type: LanguageElementType.NODE,
@@ -76,10 +76,7 @@ export class DynamicLanguageSpecification implements LanguageSpecification {
                 default: {}
               } as LanguageNode
             },
-      edges:
-        languageElement.type == LanguageElementType.EDGE
-          ? { [languageElement.name]: languageElement as LanguageEdge }
-          : {}
+      edges: languageElement.type == LanguageElementType.EDGE ? { showcaseEdge: languageElement as LanguageEdge } : {}
     };
   }
 }

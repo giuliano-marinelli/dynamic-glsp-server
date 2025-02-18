@@ -18,16 +18,16 @@ export class DynamicRefreshModelOperationHandler extends JsonOperationHandler {
   override createCommand(): MaybePromise<Command | undefined> {
     return this.commandOf(() => {
       // if in showcase mode, we need to update the model of showcase element with the new default model
-      const element = this.modelState.index.findNodeOrEdge('showcase_element');
+      const showcaseElement = this.modelState.index.findNodeOrEdge('showcase_element');
 
-      if (element) {
+      if (showcaseElement) {
         // find element specification on language
         const elementSpecification =
-          this.languageSpecification.language.nodes[element.type] ||
-          this.languageSpecification.language.edges[element.type];
+          this.languageSpecification.language.nodes[showcaseElement.type] ||
+          this.languageSpecification.language.edges[showcaseElement.type];
 
         // update the element's model
-        element.model = elementSpecification.default;
+        showcaseElement.model = elementSpecification?.default ?? {};
       }
     });
   }
