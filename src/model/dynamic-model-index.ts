@@ -1,8 +1,7 @@
 import { GLSPServerError, GModelElement, GModelIndex } from '@eclipse-glsp/server';
 
-import { injectable } from 'inversify';
-
 import { DynamicModel, Edge, Node } from './dynamic-model';
+import { injectable } from 'inversify';
 
 @injectable()
 export class DynamicModelIndex extends GModelIndex {

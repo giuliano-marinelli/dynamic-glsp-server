@@ -5,10 +5,9 @@ import {
   InitializeClientSessionParameters
 } from '@eclipse-glsp/server';
 
-import { injectable } from 'inversify';
-
 import { DynamicClientSession } from './dynamic-client-session';
 import { MessageConnectionAuth } from './dynamic-websocket-server-launcher';
+import { injectable } from 'inversify';
 
 @injectable()
 export class DynamicClientSessionFactory extends DefaultClientSessionFactory {

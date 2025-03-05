@@ -1,8 +1,7 @@
 import { ActionDispatcher, DefaultClientSession } from '@eclipse-glsp/server';
 
-import { Container } from 'inversify';
-
 import { MessageConnectionAuth } from './dynamic-websocket-server-launcher';
+import { Container } from 'inversify';
 
 export interface AuthClientSession {
   readonly connectionAuth: MessageConnectionAuth;

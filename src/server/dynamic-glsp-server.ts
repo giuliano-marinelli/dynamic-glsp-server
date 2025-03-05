@@ -1,9 +1,8 @@
 import { ActionMessage, DefaultGLSPServer } from '@eclipse-glsp/server';
 
-import { injectable } from 'inversify';
-
 import { AuthClientAction } from './dynamic-auth-client-action';
 import { DynamicClientSession } from './dynamic-client-session';
+import { injectable } from 'inversify';
 
 @injectable()
 export class DynamicGLSPServer extends DefaultGLSPServer {

@@ -1,3 +1,4 @@
+import { DynamicTypes, GDecision, GIteration, GShape } from '@dynamic-glsp/protocol';
 import {
   DefaultTypes,
   DiagramConfiguration,
@@ -5,6 +6,7 @@ import {
   GButton,
   GCompartment,
   GEdge,
+  GForeignObjectElement,
   GGraph,
   GHtmlRoot,
   GIssueMarker,
@@ -13,14 +15,11 @@ import {
   GModelElementConstructor,
   GNode,
   GPort,
-  GPreRenderedElement,
-  GShapedPreRenderedElement,
   ServerLayoutKind,
-  ShapeTypeHint,
-} from "@eclipse-glsp/server";
+  ShapeTypeHint
+} from '@eclipse-glsp/server';
 
-import { DynamicTypes, GDecision, GIteration } from "@dynamic-glsp/protocol";
-import { injectable } from "inversify";
+import { injectable } from 'inversify';
 
 @injectable()
 export class DynamicDiagramConfiguration implements DiagramConfiguration {
@@ -30,22 +29,27 @@ export class DynamicDiagramConfiguration implements DiagramConfiguration {
 
   get typeMapping(): Map<string, GModelElementConstructor<GModelElement>> {
     const mapping = new Map<string, GModelElementConstructor>();
+
+    // adecuated types
     mapping.set(DefaultTypes.GRAPH, GGraph);
     mapping.set(DefaultTypes.NODE, GNode);
     mapping.set(DefaultTypes.EDGE, GEdge);
-    mapping.set(DefaultTypes.PORT, GPort);
-    mapping.set(DefaultTypes.LABEL, GLabel);
     mapping.set(DefaultTypes.COMPARTMENT, GCompartment);
+    mapping.set(DefaultTypes.LABEL, GLabel);
+
+    // non-adequated types
+    mapping.set(DefaultTypes.PORT, GPort);
     mapping.set(DefaultTypes.BUTTON, GButton);
     mapping.set(DefaultTypes.ISSUE_MARKER, GIssueMarker);
 
+    // others
     mapping.set(DefaultTypes.HTML, GHtmlRoot);
-    mapping.set(DefaultTypes.PRE_RENDERED, GPreRenderedElement);
-    mapping.set(DefaultTypes.FOREIGN_OBJECT, GShapedPreRenderedElement);
+    mapping.set(DefaultTypes.FOREIGN_OBJECT, GForeignObjectElement);
 
     // add dynamic types
     mapping.set(DynamicTypes.ITERATION, GIteration);
     mapping.set(DynamicTypes.DECISION, GDecision);
+    mapping.set(DynamicTypes.SHAPE, GShape);
 
     return mapping;
   }
@@ -57,8 +61,8 @@ export class DynamicDiagramConfiguration implements DiagramConfiguration {
         deletable: true,
         reparentable: false,
         repositionable: true,
-        resizable: true,
-      },
+        resizable: true
+      }
     ];
   }
 
@@ -70,8 +74,8 @@ export class DynamicDiagramConfiguration implements DiagramConfiguration {
         repositionable: true,
         routable: true,
         sourceElementTypeIds: [DefaultTypes.NODE],
-        targetElementTypeIds: [DefaultTypes.NODE],
-      },
+        targetElementTypeIds: [DefaultTypes.NODE]
+      }
     ];
   }
 }

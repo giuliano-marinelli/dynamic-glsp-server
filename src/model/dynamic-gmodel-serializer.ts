@@ -1,4 +1,11 @@
-import { BooleanCondition, BooleanExpression, DynamicTypes, GDecision, GIteration } from '@dynamic-glsp/protocol';
+import {
+  BooleanCondition,
+  BooleanExpression,
+  DynamicTypes,
+  GDecision,
+  GIteration,
+  GShape
+} from '@dynamic-glsp/protocol';
 import {
   DefaultGModelSerializer,
   GLSPServerError,
@@ -20,6 +27,9 @@ import { inject } from 'inversify';
 export class DynamicGModelSerializer extends DefaultGModelSerializer {
   @inject(DynamicDiagramConfiguration)
   protected diagramConfiguration!: DynamicDiagramConfiguration;
+
+  authorizedKeys = ['args'];
+  protectedKeys = ['aModel', 'model', 'elementType', 'elementLabel'];
 
   override createElement(
     gModel: GModelElementSchema,
@@ -275,7 +285,7 @@ export class DynamicGModelSerializer extends DefaultGModelSerializer {
         const value = (gModel as any)[key];
         if (typeof value !== 'function') {
           // here we have to translate binding variables to values if they are used in the schema
-          if (typeof value === 'string' && value.includes('$')) {
+          if (typeof value === 'string' && value.includes('$') && !this.isProtected(key)) {
             (element as any)[key] = this.processBindingString(value, model, path, iterand);
 
             // NEXT IS COMMENTED OUT BECAUSE IT IS NOT NEEDED AT THE MOMENT
@@ -289,12 +299,25 @@ export class DynamicGModelSerializer extends DefaultGModelSerializer {
             // const keyBind = this.getBindingVariable(value, path, iterand);
             // gModel['args'] = { ...gModel['args'], [key + 'Bind']: keyBind };
             // element.args = { ...element.args, [key + 'Bind']: keyBind };
+          } else if (typeof value === 'object' && this.isAuthorized(key)) {
+            (element as any)[key] = this.initializeElement((element as any)[key] ?? {}, value, model, path, iterand);
           } else {
             (element as any)[key] = value;
           }
         }
       }
     }
+
+    // if the element is a shape, we have to initialize their size (using layoutOptions)
+    // this is for the case the shape is a relative child
+    if (element instanceof GShape) {
+      let width = (gModel as GShape).layoutOptions?.relWidth;
+      let height = (gModel as GShape).layoutOptions?.relHeight;
+      if ((width as string).includes('%') || (width as string) == '') width = 1;
+      if ((height as string).includes('%') || (height as string) == '') height = 1;
+      element.size = { width: parseFloat(width as string), height: parseFloat(height as string) };
+    }
+
     return element;
   }
 
@@ -347,8 +370,7 @@ export class DynamicGModelSerializer extends DefaultGModelSerializer {
       }
 
       return undefined;
-    }
-    if (child.type == DynamicTypes.DECISION) {
+    } else if (child.type == DynamicTypes.DECISION) {
       if (!parent) {
         // throw new GLSPServerError(`Decision element must have a parent.`);
         // if it doesn't have a parent, we simply return undefined
@@ -402,5 +424,13 @@ export class DynamicGModelSerializer extends DefaultGModelSerializer {
     }
 
     return parent;
+  }
+
+  protected isAuthorized(key: string): boolean {
+    return this.authorizedKeys.includes(key);
+  }
+
+  protected isProtected(key: string): boolean {
+    return this.protectedKeys.includes(key);
   }
 }

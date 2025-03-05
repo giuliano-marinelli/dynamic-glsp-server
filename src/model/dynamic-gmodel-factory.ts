@@ -52,8 +52,11 @@ export class DynamicGModelFactory implements GModelFactory {
     nodeSpec.gModel.id = node.id;
     nodeSpec.gModel.position = node.position;
     nodeSpec.gModel.size = node.size;
-    nodeSpec.gModel.layoutOptions = { prefWidth: node.size.width, prefHeight: node.size?.height };
     nodeSpec.gModel.cssClasses = ['node'];
+
+    if (!nodeSpec.gModel.layoutOptions) nodeSpec.gModel.layoutOptions = {};
+    if (!nodeSpec.gModel.layoutOptions.prefWidth) nodeSpec.gModel.layoutOptions.prefWidth = node.size.width;
+    if (!nodeSpec.gModel.layoutOptions.prefHeight) nodeSpec.gModel.layoutOptions.prefHeight = node.size.height;
 
     // set the elementType argument for use in the model index for filtering nodes by type
     if (!nodeSpec.gModel['args']) nodeSpec.gModel['args'] = {};

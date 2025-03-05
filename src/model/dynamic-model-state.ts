@@ -1,9 +1,8 @@
 import { DefaultModelState, JsonModelState } from '@eclipse-glsp/server';
 
-import { inject, injectable } from 'inversify';
-
 import { DynamicModel } from './dynamic-model';
 import { DynamicModelIndex } from './dynamic-model-index';
+import { inject, injectable } from 'inversify';
 
 @injectable()
 export class DynamicModelState extends DefaultModelState implements JsonModelState<DynamicModel> {

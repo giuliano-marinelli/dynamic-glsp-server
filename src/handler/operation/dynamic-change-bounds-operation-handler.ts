@@ -15,6 +15,8 @@ import { inject, injectable } from 'inversify';
 export class DynamicChangeBoundsOperationHandler extends JsonOperationHandler {
   readonly operationType = ChangeBoundsOperation.KIND;
 
+  minSize = { width: 20, height: 20 };
+
   @inject(DynamicModelState)
   protected override modelState!: DynamicModelState;
 
@@ -31,7 +33,7 @@ export class DynamicChangeBoundsOperationHandler extends JsonOperationHandler {
     const gNode = index.findByClass(elementId, GNode);
     const node = gNode ? index.findNode(gNode.id) : undefined;
     if (node) {
-      node.size = newSize;
+      node.size = newSize.width >= this.minSize.width && newSize.height >= this.minSize.height ? newSize : this.minSize;
       if (newPosition) {
         node.position = newPosition;
       }
