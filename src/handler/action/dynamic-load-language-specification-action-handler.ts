@@ -13,8 +13,10 @@ export class DynamicLoadLanguageSpecificationActionHandler implements ActionHand
   protected languageSpecification!: DynamicLanguageSpecification;
 
   async execute(action: LoadLanguageSpecificationAction): Promise<Action[]> {
-    await this.languageSpecification.load(action as LoadLanguageSpecificationAction & AuthClientAction);
+    const language = await this.languageSpecification.load(
+      action as LoadLanguageSpecificationAction & AuthClientAction
+    );
 
-    return [ReadyLanguageSpecificationAction.create()];
+    return [ReadyLanguageSpecificationAction.create(language)];
   }
 }

@@ -19,10 +19,14 @@ import {
   ShapeTypeHint
 } from '@eclipse-glsp/server';
 
-import { injectable } from 'inversify';
+import { DynamicLanguageSpecification } from '../model/dynamic-language-specification';
+import { inject, injectable } from 'inversify';
 
 @injectable()
 export class DynamicDiagramConfiguration implements DiagramConfiguration {
+  @inject(DynamicLanguageSpecification)
+  protected languageSpecification: DynamicLanguageSpecification;
+
   layoutKind = ServerLayoutKind.MANUAL;
   needsClientLayout = true;
   animatedUpdate = true;
@@ -55,27 +59,38 @@ export class DynamicDiagramConfiguration implements DiagramConfiguration {
   }
 
   get shapeTypeHints(): ShapeTypeHint[] {
-    return [
-      {
-        elementTypeId: DefaultTypes.NODE,
-        deletable: true,
-        reparentable: false,
+    // use language specification to get the shape type hints for each node type
+    if (!this.languageSpecification?.language?.nodes) return [];
+    return Object.keys(this.languageSpecification.language.nodes).map((nodeType) => {
+      const nodeSpec = this.languageSpecification.language.nodes[nodeType];
+      return {
+        elementTypeId: nodeType,
+        resizable: !nodeSpec.gModel?.layoutOptions?.resizable ? false : true,
+        reparentable: true,
         repositionable: true,
-        resizable: true
-      }
-    ];
+        deletable: true
+      };
+    });
   }
 
   get edgeTypeHints(): EdgeTypeHint[] {
-    return [
-      {
-        elementTypeId: DefaultTypes.EDGE,
-        deletable: true,
-        repositionable: true,
-        routable: true,
-        sourceElementTypeIds: [DefaultTypes.NODE],
-        targetElementTypeIds: [DefaultTypes.NODE]
-      }
-    ];
+    // use language specification to get edge types and return an edge type hint for each constraint in each edge
+    if (!this.languageSpecification?.language?.edges) return [];
+    const edgeTypeHints: EdgeTypeHint[] = [];
+    Object.keys(this.languageSpecification.language.edges).forEach((edgeType) => {
+      const edgeSpec = this.languageSpecification.language.edges[edgeType];
+      edgeSpec.constraints?.forEach((constraint) => {
+        edgeTypeHints.push({
+          elementTypeId: edgeType,
+          sourceElementTypeIds: constraint.source,
+          targetElementTypeIds: constraint.target,
+          deletable: true,
+          repositionable: true,
+          routable: true
+        });
+      });
+    });
+
+    return edgeTypeHints;
   }
 }

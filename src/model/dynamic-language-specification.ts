@@ -26,7 +26,7 @@ export class DynamicLanguageSpecification implements LanguageSpecification {
   @inject(ExternalServices)
   protected services: ExternalServices;
 
-  async load(action: LoadLanguageSpecificationAction & AuthClientAction) {
+  async load(action: LoadLanguageSpecificationAction & AuthClientAction): Promise<Language> {
     const { showcaseMode, connectionAuth } = action;
 
     const newLanguage = action.language;
@@ -53,6 +53,8 @@ export class DynamicLanguageSpecification implements LanguageSpecification {
     }
 
     this.language = language;
+
+    return language;
   }
 
   protected createLanguageForShowcase(languageElement: LanguageElement): Language {
