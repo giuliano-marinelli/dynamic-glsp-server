@@ -48,6 +48,9 @@ export class DynamicGModelFactory implements GModelFactory {
     // if the node is the showcase element, process the autoincrement with a fixed value
     if (node.id == 'showcase_element') node.model = this.gModelSerializer.processAutoincrement(nodeSpec.default, 1);
 
+    // set type as a subtype of node with the node type
+    nodeSpec.gModel.type = `node:${node.type}`;
+
     // set generic gModel properties (this properties can't be setted by the language specification)
     nodeSpec.gModel.id = node.id;
     nodeSpec.gModel.position = node.position;
@@ -89,6 +92,9 @@ export class DynamicGModelFactory implements GModelFactory {
 
     // if the edge is the showcase element, process the autoincrement with a fixed value
     if (edge.id == 'showcase_element') edge.model = this.gModelSerializer.processAutoincrement(edgeSpec.default, 1);
+
+    // set type as a subtype of edge with the edge type
+    edgeSpec.gModel.type = `edge:${edge.type}`;
 
     // set generic gModel properties (this properties can't be setted by the language specification)
     edgeSpec.gModel.id = edge.id;

@@ -55,6 +55,19 @@ export class DynamicDiagramConfiguration implements DiagramConfiguration {
     mapping.set(DynamicTypes.DECISION, GDecision);
     mapping.set(DynamicTypes.SHAPE, GShape);
 
+    // add language specification types
+    if (this.languageSpecification?.language?.nodes) {
+      Object.keys(this.languageSpecification.language.nodes).forEach((nodeType) => {
+        mapping.set(`node:${nodeType}`, GNode);
+      });
+    }
+
+    if (this.languageSpecification?.language?.edges) {
+      Object.keys(this.languageSpecification.language.edges).forEach((edgeType) => {
+        mapping.set(`edge:${edgeType}`, GEdge);
+      });
+    }
+
     return mapping;
   }
 
@@ -64,7 +77,7 @@ export class DynamicDiagramConfiguration implements DiagramConfiguration {
     return Object.keys(this.languageSpecification.language.nodes).map((nodeType) => {
       const nodeSpec = this.languageSpecification.language.nodes[nodeType];
       return {
-        elementTypeId: nodeType,
+        elementTypeId: `node:${nodeType}`,
         resizable: !nodeSpec.gModel?.layoutOptions?.resizable ? false : true,
         reparentable: true,
         repositionable: true,
@@ -81,9 +94,9 @@ export class DynamicDiagramConfiguration implements DiagramConfiguration {
       const edgeSpec = this.languageSpecification.language.edges[edgeType];
       edgeSpec.constraints?.forEach((constraint) => {
         edgeTypeHints.push({
-          elementTypeId: edgeType,
-          sourceElementTypeIds: constraint.source,
-          targetElementTypeIds: constraint.target,
+          elementTypeId: `edge:${edgeType}`,
+          sourceElementTypeIds: constraint.source.map((source) => `node:${source}`),
+          targetElementTypeIds: constraint.target.map((target) => `node:${target}`),
           deletable: true,
           repositionable: true,
           routable: true

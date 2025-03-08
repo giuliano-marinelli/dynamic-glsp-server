@@ -26,11 +26,10 @@ export class DynamicCreateEdgeOperationHandler extends JsonCreateEdgeOperationHa
 
   override createCommand(operation: CreateEdgeOperation): MaybePromise<Command | undefined> {
     return this.commandOf(() => {
-      const edge = this.createEdge(
-        operation.args?.edgeType as string,
-        operation.sourceElementId,
-        operation.targetElementId
-      );
+      console.log('operation', operation);
+      // if edgeType comes as edge subtype, it is necessary to remove the prefix
+      const edgeType = (operation.args?.edgeType as string)?.replace('edge:', '') ?? DefaultTypes.EDGE;
+      const edge = this.createEdge(edgeType, operation.sourceElementId, operation.targetElementId);
       this.modelState.sourceModel.edges.push(edge);
     });
   }
@@ -48,7 +47,7 @@ export class DynamicCreateEdgeOperationHandler extends JsonCreateEdgeOperationHa
   override getTriggerActions(): TriggerEdgeCreationAction[] {
     this.elementTypeIds = Object.keys(this.languageSpecification.language?.edges) ?? this.elementTypeIds;
     return this.elementTypeIds.map((elementTypeId) =>
-      TriggerEdgeCreationAction.create(DefaultTypes.EDGE, { args: this.createTriggerArgs(elementTypeId) })
+      TriggerEdgeCreationAction.create(`edge:${elementTypeId}`, { args: this.createTriggerArgs(elementTypeId) })
     );
   }
 

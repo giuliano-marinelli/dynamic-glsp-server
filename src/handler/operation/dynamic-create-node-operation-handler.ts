@@ -36,8 +36,10 @@ export class DynamicCreateNodeOperationHandler extends JsonCreateNodeOperationHa
 
   override createCommand(operation: CreateNodeOperation): MaybePromise<Command | undefined> {
     return this.commandOf(() => {
+      // if nodeType comes as node subtype, it is necessary to remove the prefix
+      const nodeType = (operation.args?.nodeType as string)?.replace('node:', '') ?? DefaultTypes.NODE;
       const relativeLocation = this.getRelativeLocation(operation) ?? Point.ORIGIN;
-      const node = this.createNode((operation.args?.nodeType as string) ?? DefaultTypes.NODE, relativeLocation);
+      const node = this.createNode(nodeType, relativeLocation);
       this.modelState.sourceModel.nodes.push(node);
     });
   }
