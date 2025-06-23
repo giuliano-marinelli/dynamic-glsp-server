@@ -22,6 +22,7 @@
     "prepublish": "npm run build"
   },
   "dependencies": {
+    "expressionparser": "^1.1.9",
     "reflect-metadata": "^0.2.2",
     "uuid": "^11.0.5",
     "vscode-jsonrpc": "^8.2.0",

@@ -1,11 +1,4 @@
-import {
-  BooleanCondition,
-  BooleanExpression,
-  DynamicTypes,
-  GDecision,
-  GIteration,
-  GShape
-} from '@dynamic-glsp/protocol';
+import { DynamicTypes, GDecision, GIteration, GShape } from '@dynamic-glsp/protocol';
 import {
   DefaultGModelSerializer,
   GLSPServerError,
@@ -16,6 +9,8 @@ import {
 } from '@eclipse-glsp/server';
 
 import { DynamicDiagramConfiguration } from '../diagram/dynamic-diagram-configuration';
+import { ExpressionParser, formula } from 'expressionparser';
+import { ExpressionThunk, ExpressionValue } from 'expressionparser/dist/ExpressionParser';
 import { inject } from 'inversify';
 
 /**
@@ -53,196 +48,22 @@ export class DynamicGModelSerializer extends DefaultGModelSerializer {
   }
 
   /**
-   * Gets the default model value object and the autoincrement value and returns the object with the autoincrement value set.
+   * Traverse the model object using the bind to get their value.
+   * It takes into account nested objects and arrays.
    *
    * @example
-   * defaultModel = { name: 'element_${autoincrement}' }, autoincrement = 1 -> { name: 'element_1' }
-   */
-  processAutoincrement(defaultModel: any, autoincrement?: number): any {
-    if (!defaultModel) return {};
-    return JSON.parse(
-      JSON.stringify(defaultModel).replace(
-        /\${autoincrement}/g,
-        autoincrement != undefined ? autoincrement.toString() : ''
-      )
-    );
-  }
-
-  /**
-   * Gets the variables declared as ${varpath} in the bindingString and replaces them with the values from the bindings.
-   */
-  processBindingString(bindingString: string, model: any, path?: string, iterand?: string): any {
-    // find all the variables in the string between ${var}
-    const vars = bindingString?.match(/\${(.*?)}/g);
-
-    if (vars) {
-      // verify if the binding string is composed by only one variable and no other characters
-      // if so, return the value of the variable in the model
-      if (vars.length == 1 && bindingString?.match(/^\${(.*?)}$/)) {
-        return this.getBindingVariableValue(this.getBindingVariable(bindingString, path, iterand), model);
-      }
-
-      // for each variable, find the value in the model and replace it in the string
-      vars.forEach((varpath) => {
-        const value = this.getBindingVariableValue(this.getBindingVariable(varpath, path, iterand), model);
-        bindingString = bindingString.replace(varpath, value);
-      });
-    }
-
-    return bindingString;
-  }
-
-  /**
-   * Returns the boolean value of the expression based on the conditions and values of the model.
-   *
-   * If anything goes wrong, it returns false.
-   */
-  processBooleanExpression(condition: BooleanExpression, model: any, path?: string, iterand?: string): boolean {
-    if (condition.eq) {
-      return this.processBooleanCondition(condition.eq, model, path, iterand, 'eq');
-    } else if (condition.ne) {
-      return this.processBooleanCondition(condition.ne, model, path, iterand, 'ne');
-    } else if (condition.gt) {
-      return this.processBooleanCondition(condition.gt, model, path, iterand, 'gt');
-    } else if (condition.gte) {
-      return this.processBooleanCondition(condition.gte, model, path, iterand, 'gte');
-    } else if (condition.lt) {
-      return this.processBooleanCondition(condition.lt, model, path, iterand, 'lt');
-    } else if (condition.lte) {
-      return this.processBooleanCondition(condition.lte, model, path, iterand, 'lte');
-    } else if (condition.in) {
-      return this.processBooleanCondition(condition.in, model, path, iterand, 'in');
-    } else if (condition.any) {
-      return this.processBooleanCondition(condition.any, model, path, iterand, 'any');
-    } else if (condition.between) {
-      return this.processBooleanCondition(condition.between, model, path, iterand, 'between');
-    } else if (condition.and) {
-      return condition.and.every((c) => this.processBooleanExpression(c, model, path, iterand));
-    } else if (condition.or) {
-      return condition.or.some((c) => this.processBooleanExpression(c, model, path, iterand));
-    } else if (condition.not) {
-      return !this.processBooleanExpression(condition.not, model, path, iterand);
-    }
-    return false;
-  }
-
-  /**
-   * Return the boolean value of the condition based on the operator and the values of the left and right.
-   *
-   * If the values are strings, they are checked if they are variables and replaced by the values in the model.
-   *
-   * If anything goes wrong, it returns false
-   */
-  processBooleanCondition(
-    condition: BooleanCondition,
-    model: any,
-    path?: string,
-    iterand?: string,
-    operator?: string
-  ): boolean {
-    try {
-      const left = this.processBooleanConditionValue(condition.left, model, path, iterand);
-      const right = this.processBooleanConditionValue(condition.right, model, path, iterand);
-
-      switch (operator) {
-        case 'eq':
-          return left == right;
-        case 'ne':
-          return left != right;
-        case 'gt':
-          return left > right;
-        case 'gte':
-          return left >= right;
-        case 'lt':
-          return left < right;
-        case 'lte':
-          return left <= right;
-        case 'in':
-          // check if left is string and right is array of strings
-          if (typeof left === 'string' && Array.isArray(right)) return (right as string[])?.includes(left as string);
-          // check if left is number and right is array of numbers
-          if (typeof left === 'number' && Array.isArray(right)) return (right as number[])?.includes(left as number);
-        case 'any':
-          // check if left is string and right is array of strings
-          if (typeof left === 'string' && Array.isArray(right))
-            return (right as string[])?.some((r) => r == (left as string));
-          // check if left is number and right is array of numbers
-          if (typeof left === 'number' && Array.isArray(right))
-            return (right as number[])?.some((r) => r == (left as number));
-        case 'between':
-          // check if left is number and right is array with two numbers
-          if (typeof left === 'number' && Array.isArray(right) && right.length == 2)
-            return (
-              (left as number) >= (right as [number, number])[0] && (left as number) <= (right as [number, number])[1]
-            );
-        default:
-          return false;
-      }
-    } catch (error) {
-      return false;
-    }
-  }
-
-  /**
-   * Returns the value of the condition based on the type of the value.
-   *
-   * If the value is a string, it's checked if it's a variable and replaced by the value in the model
-   */
-  processBooleanConditionValue(
-    value: string | number | boolean | string[] | number[] | [number, number],
-    model: any,
-    path?: string,
-    iterand?: string
-  ): string | number | boolean | string[] | number[] | [number, number] {
-    if (typeof value === 'string') {
-      return this.processBindingString(value, model, path, iterand);
-    } else {
-      return value;
-    }
-  }
-
-  /**
-   * Returns the variable name from the binding string.
-   *
-   * If the binding string includes the iterand, it's replaced by the path.
+   * bind = 'persona.nombre' -> model['persona']['nombre']
    *
    * @example
-   * bindingString = '${class.attributes}' -> 'class.attributes'
-   *
-   * @example
-   * bindingString = '${attribute.name}', path = 'class.attributes[0]', iterand = 'attribute' -> 'class.attributes[0].name'
+   * bind = 'persona.nombres[0]' -> model['persona']['nombres'][0]
    */
-  getBindingVariable(bindingString: string, path?: string, iterand?: string): string | undefined {
-    // get string between ${}
-    const match = bindingString?.match(/\${(.*?)}/);
-    if (match) {
-      const varpath = match[1].split('.');
+  getBindValue(bind: string, model: any): any {
+    if (!bind || !model) return;
+    const bindPath = bind.split('.');
 
-      // replace iterand with path if it's defined
-      if (iterand && varpath[0] == iterand) {
-        varpath[0] = path ?? '';
-      }
+    if (!bindPath) return null;
 
-      return varpath.join('.');
-    }
-  }
-
-  /**
-   * Traverse the model object to getall  values between ${} in the string taking into account nested objects
-   *
-   * @example
-   * varpath = 'persona.nombre' -> model['persona']['nombre']
-   *
-   * @example
-   * varpath = 'persona.nombres[0]' -> model['persona']['nombres'][0]
-   */
-  getBindingVariableValue(bindingVar?: string, model?: any): any {
-    if (!bindingVar || !model) return;
-    const varpath = bindingVar.split('.');
-
-    if (!varpath) return null;
-
-    return varpath.reduce((acc, key) => {
+    return bindPath.reduce((acc, key) => {
       if (key.includes('[')) {
         const index = parseInt(key.match(/\[(.*?)\]/)![1]);
         return acc?.[key.split('[')[0]][index];
@@ -251,26 +72,97 @@ export class DynamicGModelSerializer extends DefaultGModelSerializer {
   }
 
   /**
-   * Sets the value in a model object traversing it with the path and putting the value in the last key.
+   * If the bind is a relative path, it will be normalized to an absolute path replacing the iterand with the path.
+   * If the bind is an absolute path, it will be returned as is.
+   *
+   * * @example
+   * bind = 'class.attributes' -> 'class.attributes'
+   *
+   * @example
+   * bind = 'attribute.name', path = 'class.attributes[0]', iterand = 'attribute' -> 'class.attributes[0].name'
    */
-  setBindingVariable(model: any, path: string, value: any): void {
-    const keys = path.split('.');
-    keys.reduce((acc, key, index) => {
-      if (key.includes('[')) {
-        const index = parseInt(key.match(/\[(.*?)\]/)![1]);
-        if (index == keys.length - 1) {
-          acc[key.split('[')[0]][index] = value;
-          return;
-        }
-        return acc?.[key.split('[')[0]][index];
-      } else {
-        if (index == keys.length - 1) {
-          acc[key] = value;
-          return;
-        }
-        return acc?.[key];
-      }
-    }, model);
+  normalizeBind(bind: string, path?: string, iterand?: string): string {
+    if (!bind) return '';
+    // if path or iterand are not defined, return the bind as is
+    if (!path || !iterand) return bind;
+
+    const bindPath = bind.split('.');
+    // if the first element is the iterand, replace it with the path
+    if (iterand && bindPath[0] == iterand) {
+      bindPath[0] = path ?? '';
+    }
+    return bindPath.join('.');
+  }
+
+  /**
+   * Gets the default model value object and the autoincrement value and returns the object with the autoincrement value set.
+   *
+   * @example
+   * defaultModel = { name: 'element_{autoincrement}' }, autoincrement = 1 -> { name: 'element_1' }
+   */
+  processAutoincrement(defaultModel: any, autoincrement?: number): any {
+    if (!defaultModel) return {};
+    return JSON.parse(
+      JSON.stringify(defaultModel).replace(
+        /{autoincrement}/g,
+        autoincrement != undefined ? autoincrement.toString() : ''
+      )
+    );
+  }
+
+  /**
+   * Returns the value of a single bind variable.
+   * It checks if the bindString is a valid bind variable (e.g. {variable}) and returns the value from the model.
+   * If the bindString is not a valid bind variable, it returns undefined.
+   */
+  processValueBind(bindString: string, model: any, path?: string, iterand?: string): any {
+    if (!bindString) return undefined;
+
+    // check if bindString is only a variable (e.g. {variable})
+    if (!bindString.startsWith('{') || !bindString.endsWith('}')) return undefined;
+
+    return this.getBindValue(this.normalizeBind(bindString.slice(2, -1), path, iterand), model);
+  }
+
+  /**
+   * Process the bindString replacing the variables between { and } with the values from the model.
+   */
+  processStringBind(bindString: string, model: any, path?: string, iterand?: string): string {
+    if (!bindString || typeof bindString !== 'string') return '';
+
+    return bindString.replace(/{(.*?)}/g, (match, term) => {
+      let value = this.getBindValue(this.normalizeBind(term, path, iterand), model) ?? '';
+      return value;
+    });
+  }
+
+  /**
+   * Returns the boolean value of the expression based on the conditions and values of the model.
+   *
+   * If anything goes wrong, it returns false.
+   */
+  processBooleanBind(bindString: string, model: any, path?: string, iterand?: string): boolean {
+    if (!bindString || typeof bindString !== 'string') return false;
+
+    // create a formula parser for analyse conditions
+    const parser = formula((term) => term);
+
+    // replace the bind variables in the bindString with their values
+    const booleanExp = bindString.replace(/{(.*?)}/g, (match, term) => {
+      let value = this.getBindValue(this.normalizeBind(term, path, iterand), model) ?? '';
+      if (typeof value === 'boolean' || !value) value = value ? 'TRUE' : 'FALSE';
+      return value;
+    });
+
+    try {
+      // analyze the condition with the parser and return the boolean value
+      const result = new ExpressionParser(parser).expressionToValue(booleanExp);
+      console.log(`Processing boolean bind: ${bindString} -> ${booleanExp} -> ${result}`);
+      return result as boolean;
+    } catch (error) {
+      console.error(`Error processing boolean bind: ${bindString} -> ${error}`);
+      return false; // return false if there is an error in the expression
+    }
   }
 
   protected override initializeElement(
@@ -285,8 +177,8 @@ export class DynamicGModelSerializer extends DefaultGModelSerializer {
         const value = (gModel as any)[key];
         if (typeof value !== 'function') {
           // here we have to translate binding variables to values if they are used in the schema
-          if (typeof value === 'string' && value.includes('$') && !this.isProtected(key)) {
-            (element as any)[key] = this.processBindingString(value, model, path, iterand);
+          if (typeof value === 'string' && value.includes('{') && !this.isProtected(key)) {
+            (element as any)[key] = this.processStringBind(value, model, path, iterand);
 
             // NEXT IS COMMENTED OUT BECAUSE IT IS NOT NEEDED AT THE MOMENT
             // IT IS USED ON APPLY LABEL EDIT OPERATION (WHICH IS FOR EDIT PROPERTIES DIRECTLY ON THE DIAGRAM)
@@ -339,7 +231,7 @@ export class DynamicGModelSerializer extends DefaultGModelSerializer {
 
       const iteration = gModel as GIteration;
       if (!iteration.iterable) return;
-      const iterable = this.processBindingString(iteration.iterable, model, path, iterand);
+      const iterable = this.getBindValue(this.normalizeBind(iteration.iterable, path, iterand), model);
 
       if (iterable && iteration.template) {
         // check if iterable is an array
@@ -358,7 +250,7 @@ export class DynamicGModelSerializer extends DefaultGModelSerializer {
               iteration.template!,
               parent,
               model,
-              this.getBindingVariable(iteration.iterable!, path, iterand) + '[' + index + ']',
+              this.normalizeBind(iteration.iterable, path, iterand) + '[' + index + ']',
               iteration.iterand,
               identifier + '_' + (iteration.iterand ?? 'iterand') + index
             );
@@ -380,20 +272,20 @@ export class DynamicGModelSerializer extends DefaultGModelSerializer {
       const decision = gModel as GDecision;
 
       if (!decision.condition) return;
-      const condition = this.processBooleanExpression(decision.condition, model);
+      const condition = this.processBooleanBind(decision.condition, model);
 
       // add the child to the parent children list if the condition is true
       // otherwise add the else child if it exists
       if (condition && decision.then) {
-        parent.children = [
-          ...parent.children,
-          this.createElement(decision.then, parent, model, path, iterand, identifier)
-        ];
+        const thenChild = this.createElement(decision.then, parent, model, path, iterand, identifier);
+        if (thenChild != undefined) {
+          parent.children.push(thenChild);
+        }
       } else if (!condition && decision.else) {
-        parent.children = [
-          ...parent.children,
-          this.createElement(decision.else, parent, model, path, iterand, identifier)
-        ];
+        const elseChild = this.createElement(decision.else, parent, model, path, iterand, identifier);
+        if (elseChild != undefined) {
+          parent.children.push(elseChild);
+        }
       }
 
       return;
@@ -415,7 +307,8 @@ export class DynamicGModelSerializer extends DefaultGModelSerializer {
     iterand?: string
   ): GModelElement {
     this.initializeElement(parent, gModel, model, path, iterand);
-    if (gModel.children) {
+
+    if (gModel?.children) {
       parent.children = [];
       gModel.children.forEach((childSchema, index) => {
         const child = this.createElement(childSchema, parent, model, path, iterand, 'child' + index);
